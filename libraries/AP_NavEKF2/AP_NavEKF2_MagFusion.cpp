@@ -2,11 +2,7 @@
 
 #include "AP_NavEKF2.h"
 #include "AP_NavEKF2_core.h"
-#include <AP_AHRS/AP_AHRS.h>
-#include <AP_Vehicle/AP_Vehicle.h>
 #include <GCS_MAVLink/GCS.h>
-
-#include <stdio.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -259,9 +255,6 @@ void NavEKF2_core::SelectMagFusion()
         return;
     }
 
-    // check for and read new magnetometer measurements
-    readMagData();
-
     // If we are using the compass and the magnetometer has been unhealthy for too long we declare a timeout
     if (magHealth) {
         magTimeout = false;
@@ -269,6 +262,9 @@ void NavEKF2_core::SelectMagFusion()
     } else if ((imuSampleTime_ms - lastHealthyMagTime_ms) > frontend->magFailTimeLimit_ms && use_compass()) {
         magTimeout = true;
     }
+
+    // check for and read new magnetometer measurements
+    readMagData();
 
     // check for availability of magnetometer data to fuse
     magDataToFuse = storedMag.recall(magDataDelayed,imuDataDelayed.time_ms);
@@ -788,6 +784,7 @@ void NavEKF2_core::fuseEulerYaw()
             measured_yaw = wrap_PI(-atan2f(magMeasNED.y, magMeasNED.x) + MagDeclination());
         } else if (extNavUsedForYaw) {
             // Get the yaw angle  from the external vision data
+            R_YAW = sq(extNavDataDelayed.angErr);
             extNavDataDelayed.quat.to_euler(euler321.x, euler321.y, euler321.z);
             measured_yaw =  euler321.z;
         } else {
@@ -847,6 +844,7 @@ void NavEKF2_core::fuseEulerYaw()
             measured_yaw = wrap_PI(-atan2f(magMeasNED.y, magMeasNED.x) + MagDeclination());
         } else if (extNavUsedForYaw) {
             // Get the yaw angle  from the external vision data
+            R_YAW = sq(extNavDataDelayed.angErr);
             euler312 = extNavDataDelayed.quat.to_vector312();
             measured_yaw =  euler312.z;
         } else {

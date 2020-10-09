@@ -556,6 +556,22 @@ uint32_t UARTDriver::available() {
     return _readbuf.available();
 }
 
+uint32_t UARTDriver::available_locked(uint32_t key)
+{
+    if (lock_read_key != 0 && key != lock_read_key) {
+        return -1;
+    }
+    if (sdef.is_usb) {
+#ifdef HAVE_USB_SERIAL
+
+        if (((SerialUSBDriver*)sdef.serial)->config->usbp->state != USB_ACTIVE) {
+            return 0;
+        }
+#endif
+    }
+    return _readbuf.available();
+}
+
 uint32_t UARTDriver::txspace()
 {
     if (!_initialised) {
@@ -573,7 +589,7 @@ bool UARTDriver::discard_input()
         return false;
     }
 
-    _readbuf.empty();
+    _readbuf.clear();
 
     if (!_rts_is_active) {
         update_rts_line();
